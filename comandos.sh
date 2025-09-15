@@ -1,11 +1,8 @@
 #!/bin/bash
 
-sudo apt install wget curl -y
-sudo sh -c 'echo "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main" > /etc/apt/sources.list.d/vscode.list'
-curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg
-sudo mv microsoft.gpg /etc/apt/trusted.gpg.d/microsoft.gpg
-sudo apt update -y
-sudo apt install code -y
+sudo apt install wget -y
+wget "https://code.visualstudio.com/sha/download?build=stable&os=linux-deb-x64"
+sudo apt install ./code_1.104.0-1757488003_amd64.deb - y
 wget https://download-cdn.jetbrains.com/python/pycharm-2025.2.1.1.tar.gz
 sudo tar xzf pycharm-*.tar.gz -C /opt/
 sudo apt install inkscape -y
