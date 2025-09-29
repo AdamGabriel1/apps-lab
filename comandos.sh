@@ -1,9 +1,19 @@
 #!/bin/bash
 
-sudo apt install neofetch -y
-sudo apt install wget -y
-wget https://vscode.download.prss.microsoft.com/dbazure/download/stable/f220831ea2d946c0dcb0f3eaa480eb435a2c1260/code_1.104.0-1757488003_amd64.deb
-sudo apt install ./code_1.104.0-1757488003_amd64.deb -y
-wget https://download-cdn.jetbrains.com/python/pycharm-2025.2.1.1.tar.gz
-sudo tar xzf pycharm-*.tar.gz -C /opt/
-sudo apt install inkscape -y
+LOG_FILE="system_metrics_$(date +%Y%m%d_%H%M%S).csv"
+
+# Cabeçalho do CSV
+echo "timestamp,ram_used_mb,ram_percent,cpu_percent,disk_used_gb,process_count,temperature" > $LOG_FILE
+
+while true; do
+    TIMESTAMP=$(date +%Y-%m-%d_%H:%M:%S)
+    RAM_USED=$(free -m | awk 'NR==2{print $3}')
+    RAM_PERCENT=$(free | awk 'NR==2{printf "%.1f", $3*100/$2}')
+    CPU_PERCENT=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d'%' -f1)
+    DISK_USED=$(df -m / | awk 'NR==2{print $3}')
+    PROCESS_COUNT=$(ps aux --no-heading | wc -l)
+    TEMP=$(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null | awk '{print $1/1000}' || echo "N/A")
+    
+    echo "$TIMESTAMP,$RAM_USED,$RAM_PERCENT,$CPU_PERCENT,$DISK_USED,$PROCESS_COUNT,$TEMP" >> $LOG_FILE
+    sleep 30
+done
