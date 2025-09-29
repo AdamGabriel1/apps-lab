@@ -1,19 +1,72 @@
 #!/bin/bash
+# analyze_metrics.sh - Analisar os dados coletados
 
-LOG_FILE="system_metrics_$(date +%Y%m%d_%H%M%S).csv"
+if [ $# -eq 0 ]; then
+    echo "Uso: $0 <arquivo_csv>"
+    echo "Exemplo: $0 system_metrics_20241201_143022.csv"
+    exit 1
+fi
 
-# Cabeçalho do CSV
-echo "timestamp,ram_used_mb,ram_percent,cpu_percent,disk_used_gb,process_count,temperature" > $LOG_FILE
+CSV_FILE="$1"
 
-while true; do
-    TIMESTAMP=$(date +%Y-%m-%d_%H:%M:%S)
-    RAM_USED=$(free -m | awk 'NR==2{print $3}')
-    RAM_PERCENT=$(free | awk 'NR==2{printf "%.1f", $3*100/$2}')
-    CPU_PERCENT=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d'%' -f1)
-    DISK_USED=$(df -m / | awk 'NR==2{print $3}')
-    PROCESS_COUNT=$(ps aux --no-heading | wc -l)
-    TEMP=$(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null | awk '{print $1/1000}' || echo "N/A")
-    
-    echo "$TIMESTAMP,$RAM_USED,$RAM_PERCENT,$CPU_PERCENT,$DISK_USED,$PROCESS_COUNT,$TEMP" >> $LOG_FILE
-    sleep 30
-done
+if [ ! -f "$CSV_FILE" ]; then
+    echo "Arquivo não encontrado: $CSV_FILE"
+    exit 1
+fi
+
+echo "=== ANALISE DE METRICAS ==="
+echo "Arquivo: $CSV_FILE"
+echo ""
+
+# Estatísticas básicas
+echo "--- ESTATISTICAS GERAIS ---"
+echo "Total de amostras: $(wc -l < "$CSV_FILE" | awk '{print $1-1}')"
+echo "Periodo de coleta: $(head -2 "$CSV_FILE" | tail -1 | cut -d',' -f1) até $(tail -1 "$CSV_FILE" | cut -d',' -f1)"
+echo ""
+
+# Métricas de RAM
+echo "--- MEMORIA RAM ---"
+awk -F',' 'NR>1 {print $3}' "$CSV_FILE" | sort -n | awk '
+NR==1 {min=$1}
+END {max=$1; count=NR}
+{sum+=$1}
+END {
+    avg=sum/count;
+    print "Uso medio: " avg "%";
+    print "Minimo: " min "%";
+    print "Maximo: " max "%";
+}'
+
+echo ""
+
+# Métricas de CPU
+echo "--- PROCESSADOR ---"
+awk -F',' 'NR>1 {print $4}' "$CSV_FILE" | sort -n | awk '
+NR==1 {min=$1}
+END {max=$1; count=NR}
+{sum+=$1}
+END {
+    avg=sum/count;
+    print "Uso medio: " avg "%";
+    print "Minimo: " min "%";
+    print "Maximo: " max "%";
+}'
+
+echo ""
+
+# Processos
+echo "--- PROCESSOS ---"
+awk -F',' 'NR>1 {print $6}' "$CSV_FILE" | sort -n | awk '
+NR==1 {min=$1}
+END {max=$1; count=NR}
+{sum+=$1}
+END {
+    avg=sum/count;
+    print "Media de processos: " avg;
+    print "Minimo: " min;
+    print "Maximo: " max;
+}'
+
+echo ""
+echo "Para análise gráfica, use:"
+echo "  python3 -c \"import pandas as pd; import matplotlib.pyplot as plt; df=pd.read_csv('$CSV_FILE'); df.plot(); plt.show()\""
